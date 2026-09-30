@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Turbo C++ Time Capsule</title>
+<link rel="stylesheet" href="js-dos/js-dos.css">
+<link rel="stylesheet" href="style.css">
+<script src="js-dos/js-dos.js"></script>
+<script src="programs.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="back" href="./">◂ All programs</a>
+    <h1 id="title">…</h1>
+    <span class="sub" id="year"></span>
+  </header>
+
+  <div class="player">
+    <div>
+      <div class="screen-wrap" id="screen">
+        <div class="stage">
+          <div id="dos"></div>
+          <!-- Orientation guides: a page layer over the emulator, in the program's 640x480 screen space.
+               DOS never sees it; the "Guides" button hides it. -->
+          <svg id="overlay" viewBox="0 0 640 480" preserveAspectRatio="none" hidden></svg>
+          <!-- Click-to-start poster (embed mode): DOSBox only boots when the visitor asks for it. -->
+          <button id="poster" class="poster" hidden aria-label="Run the program">
+            <img id="poster-img" alt="">
+            <span class="play">▶ Run</span>
+          </button>
+        </div>
+      </div>
+      <div class="keypad" id="keypad" aria-label="On-screen keys"></div>
+      <div class="controls">
+        <button class="wide touch-only" id="kbd-btn" title="Open your device's keyboard">⌨ Keyboard</button>
+        <input id="kbd" type="text" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="none"
+               spellcheck="false" aria-label="Type into DOS">
+        <button class="wide" id="restart" title="Reload the virtual PC">⟲ Restart</button>
+        <button class="wide" id="fullscreen">⛶ Fullscreen</button>
+        <button class="wide" id="guides-btn" hidden title="Show or hide the coordinate guides">▦ Guides</button>
+        <a class="about" id="about" hidden target="_blank" rel="noopener">About this program ↗</a>
+        <span class="facts" id="status" style="align-self:center">Booting DOSBox…</span>
+      </div>
+      <p class="credits">© 2008 Albert Davies · compiled with Borland Turbo C++ 1.01 (© 1990 Borland International) ·
+        runs on <a href="https://js-dos.com" target="_blank" rel="noopener">js-dos</a>/DOSBox (GPL-2.0)</p>
+    </div>
+
+    <div class="side">
+      <div class="box">
+        <h3>How to use</h3>
+        <ul id="howto"></ul>
+        <p class="facts" style="margin:10px 0 0">On a computer, just type: the keyboard goes straight to DOS. On a phone or tablet,
+          tap <b>⌨ Keyboard</b> to open your device's keyboard, or use the keypad under the screen.</p>
+      </div>
+      <div class="tc">
+        <div class="tabs" id="tabs"></div>
+        <pre id="source">Loading source…</pre>
+      </div>
+      <div class="box facts" id="facts"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(async function () {
+  const params = new URLSearchParams(location.search);
+  const id = params.get("p") || "field";
+  const prog = window.PROGRAMS.find((p) => p.id === id) || window.PROGRAMS[0];
+  // embed=1: compact view for an <iframe> in a blog post (no page chrome, click to start).
+  const embed = params.has("embed") && params.get("embed") !== "0";
+  if (embed) {
+    document.body.classList.add("embed");
+    const about = document.getElementById("about");
+    about.href = "play.html?p=" + encodeURIComponent(prog.id);
+    about.hidden = false;
+  }
+  document.title = prog.title + " · Turbo C++ Time Capsule";
+  document.getElementById("title").textContent = prog.title;
+  document.getElementById("year").textContent = prog.year;
+  document.getElementById("howto").innerHTML = prog.howto.map((h) => `<li>${h}</li>`).join("");
+
+  const manifest = await fetch("bundles/manifest.json", { cache: "no-store" }).then((r) => r.json());
+  const m = manifest[prog.id];
+
+  // ---- emulator -------------------------------------------------------------
+  let ci = null;
+  const status = document.getElementById("status");
+  function start() {
+    if (window.dosProps) return;
+    status.textContent = "Booting DOSBox…";
+    window.dosProps = Dos(document.getElementById("dos"), {
+      url: m.bundle + "?v=" + m.exeSha256.slice(0, 8),
+      pathPrefix: new URL("js-dos/emulators/", location.href).href,
+      autoStart: true,
+      kiosk: true,
+      noCloud: true,
+      backend: "dosbox",
+      backendLocked: true,
+      renderAspect: "4/3",
+      onEvent: (e, c) => {
+        // Note: js-dos itself defines a global function named `ci`; don't overwrite it.
+        if (e === "ci-ready") { ci = c; window.dosCi = c; document.body.dataset.dosReady = "1"; status.textContent = "Running " + m.exe; }
+      },
+    });
+  }
+  const poster = document.getElementById("poster");
+  if (embed && !params.has("autostart")) {
+    // Don't boot on page load: a post with two embeds would otherwise run two emulators flat out.
+    const img = document.getElementById("poster-img");
+    img.onerror = () => { img.remove(); };
+    img.src = "posters/" + prog.id + ".png";
+    poster.hidden = false;
+    status.textContent = "";
+    poster.addEventListener("click", () => { poster.hidden = true; start(); }, { once: true });
+  } else {
+    start();
+  }
+
+  // Pause the virtual PC while it is scrolled out of view (js-dos already pauses on hidden tabs).
+  let pausedByUs = false;
+  new IntersectionObserver(([entry]) => {
+    if (!ci) return;
+    if (!entry.isIntersecting && !pausedByUs) { ci.pause(); pausedByUs = true; }
+    else if (entry.isIntersecting && pausedByUs) { ci.resume(); pausedByUs = false; }
+  }).observe(document.getElementById("screen"));
+
+  // Tell the embedding page how tall we are, so its iframe can fit without scrollbars.
+  if (embed && window.parent !== window) {
+    const report = () => window.parent.postMessage(
+      { type: "high-school-programs:height", id: prog.id, height: document.documentElement.scrollHeight }, "*");
+    new ResizeObserver(report).observe(document.body);
+    report();
+  }
+
+  // ---- on-screen keys (js-dos key codes) -----------------------------------------
+  const KEYS = [
+    ["1", 49], ["2", 50], ["3", 51], ["4", 52], ["5", 53], ["6", 54], ["7", 55],
+    ["8", 56], ["9", 57], ["0", 48], ["−", 45], ["⌫", 259], ["Enter ↵", 257, "enter"],
+  ];
+  // Presses are queued a little apart so fast typing never merges into one DOS keystroke.
+  const queue = [];
+  let pumping = false;
+  function press(...codes) {
+    queue.push(codes);
+    if (pumping) return;
+    pumping = true;
+    (function next() {
+      const c = queue.shift();
+      if (!c) { pumping = false; return; }
+      if (ci) ci.simulateKeyPress(...c);
+      setTimeout(next, 40);
+    })();
+  }
+  // Keep focus where it is (e.g. the phone keyboard's input) when tapping on-screen keys.
+  const noFocusSteal = (b) => b.addEventListener("pointerdown", (e) => e.preventDefault());
+
+  const pad = document.getElementById("keypad");
+  for (const [label, code, cls] of KEYS) {
+    const b = document.createElement("button");
+    b.textContent = label;
+    if (cls) b.className = cls;
+    noFocusSteal(b);
+    b.addEventListener("click", () => press(code));
+    pad.appendChild(b);
+  }
+  const space = document.createElement("button");
+  space.textContent = "Any key";
+  space.className = "wide touch-only";
+  noFocusSteal(space);
+  space.addEventListener("click", () => press(32));
+  document.querySelector(".controls").insertBefore(space, document.getElementById("kbd-btn"));
+
+  // ---- numpad ----------------------------------------------------------------------
+  // js-dos forwards numpad keys as keypad scancodes, and the emulated PC boots with Num Lock
+  // off, so DOS sees arrows/Home/End instead of digits (cin then fails and spins forever).
+  // When the host numpad is producing characters (host Num Lock on), send the main-row key
+  // instead. Registered in the capture phase so it runs before js-dos's window listener.
+  const NUMPAD = { Numpad0: 48, Numpad1: 49, Numpad2: 50, Numpad3: 51, Numpad4: 52, Numpad5: 53, Numpad6: 54,
+    Numpad7: 55, Numpad8: 56, Numpad9: 57, NumpadSubtract: 45, NumpadDecimal: 46, NumpadDivide: 47, NumpadEnter: 257 };
+  const numpadDown = new Set();
+  function onNumpad(e) {
+    const code = NUMPAD[e.code];
+    if (code === undefined || e.target === document.getElementById("kbd")) return;
+    if (e.code !== "NumpadEnter" && e.key.length !== 1) return; // host Num Lock off: leave as navigation keys
+    e.stopImmediatePropagation();
+    e.preventDefault();
+    if (!ci) return;
+    if (e.type === "keydown") { if (!e.repeat) numpadDown.add(code); ci.sendKeyEvent(code, true); }
+    else { numpadDown.delete(code); ci.sendKeyEvent(code, false); }
+  }
+  window.addEventListener("keydown", onNumpad, true);
+  window.addEventListener("keyup", onNumpad, true);
+  window.addEventListener("blur", () => { for (const c of numpadDown) if (ci) ci.sendKeyEvent(c, false); numpadDown.clear(); });
+
+  // ---- device keyboard (phones/tablets) ------------------------------------------
+  // js-dos ignores key events aimed at text inputs, so this input forwards what is typed.
+  // Soft keyboards often report keyCode 229 on keydown, so characters are taken from the
+  // input's value instead: diff against the previous value (this also copes with autocomplete
+  // compositions). A zero-width sentinel lets Backspace register even when "empty".
+  const SENTINEL = "​";
+  const kbd = document.getElementById("kbd");
+  let prev = SENTINEL;
+  const caretToEnd = () => { try { kbd.setSelectionRange(kbd.value.length, kbd.value.length); } catch (e) {} };
+  const resetKbd = () => { kbd.value = prev = SENTINEL; caretToEnd(); };
+  kbd.addEventListener("focus", () => { caretToEnd(); document.body.classList.add("kbd-on"); });
+  kbd.addEventListener("blur", () => document.body.classList.remove("kbd-on"));
+  function charCodes(ch) {
+    if (ch >= "0" && ch <= "9") return [ch.charCodeAt(0)];
+    if (ch >= "a" && ch <= "z") return [ch.toUpperCase().charCodeAt(0)];
+    if (ch >= "A" && ch <= "Z") return [340, ch.charCodeAt(0)]; // left shift + letter
+    const m = { " ": 32, "-": 45, "−": 45, ".": 46, ",": 44, "/": 47, ";": 59, "=": 61, "'": 39, "\n": 257 };
+    return m[ch] ? [m[ch]] : null;
+  }
+  kbd.addEventListener("input", () => {
+    const now = kbd.value;
+    let i = 0;
+    while (i < prev.length && i < now.length && prev[i] === now[i]) i++;
+    for (let k = i; k < prev.length; k++) if (prev[k] !== SENTINEL) press(259);
+    if (!now.startsWith(SENTINEL)) press(259); // the sentinel itself was deleted: user hit Backspace
+    for (const ch of now.slice(i).replace(SENTINEL, "")) { const c = charCodes(ch); if (c) press(...c); }
+    prev = now.startsWith(SENTINEL) ? now : SENTINEL + now;
+    if (kbd.value !== prev) { kbd.value = prev; caretToEnd(); }
+    if (prev.length > 64) resetKbd();
+  });
+  kbd.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.keyCode === 13) { e.preventDefault(); press(257); resetKbd(); }
+  });
+  resetKbd();
+  document.getElementById("kbd-btn").addEventListener("click", () => { resetKbd(); kbd.focus(); });
+
+  document.getElementById("restart").onclick = () => {
+    // A restart is an explicit request to run, so skip the poster.
+    const u = new URL(location.href);
+    u.searchParams.set("autostart", "1");
+    location.replace(u.href);
+  };
+  document.getElementById("fullscreen").onclick = () => {
+    const el = document.getElementById("screen");
+    (el.requestFullscreen || el.webkitRequestFullscreen || (() => {})).call(el);
+  };
+
+  // ---- orientation guides ------------------------------------------------------------
+  // Drawn in the same 640x480 space the programs draw in (VGA mode 12h).
+  const svg = document.getElementById("overlay");
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const el = (tag, attrs, text) => {
+    const n = document.createElementNS(SVGNS, tag);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    if (text !== undefined) n.textContent = text;
+    svg.appendChild(n);
+    return n;
+  };
+  const toScreen = (e) => {
+    const r = svg.getBoundingClientRect();
+    return { sx: ((e.clientX - r.left) / r.width) * 640, sy: ((e.clientY - r.top) / r.height) * 480 };
+  };
+
+  if (prog.overlay === "coords") {
+    // FIELD.cpp reads x left→right and y bottom→top (it draws at 480-y).
+    svg.classList.add("coords");
+    for (let v = 50; v < 640; v += 50) el("line", { x1: v, y1: 0, x2: v, y2: 480, class: v % 100 ? "minor" : "major" });
+    for (let v = 50; v < 480; v += 50) el("line", { x1: 0, y1: 480 - v, x2: 640, y2: 480 - v, class: v % 100 ? "minor" : "major" });
+    for (let v = 100; v < 640; v += 100) el("text", { x: v, y: 474, "text-anchor": "middle" }, v);
+    for (let v = 100; v < 480; v += 100) el("text", { x: 634, y: 480 - v + 4, "text-anchor": "end" }, v);
+    el("text", { x: 4, y: 474 }, "0");
+    el("text", { x: 634, y: 452, "text-anchor": "end", class: "axis" }, "x →");
+    el("text", { x: 634, y: 18, "text-anchor": "end", class: "axis" }, "y ↑");
+    const readout = el("text", { x: 634, y: 40, "text-anchor": "end", class: "readout" }, "");
+    const cross = [el("line", { class: "cross" }), el("line", { class: "cross" })];
+    const show = (e) => {
+      const { sx, sy } = toScreen(e);
+      const x = Math.max(0, Math.min(639, Math.round(sx))), y = Math.max(0, Math.min(479, Math.round(480 - sy)));
+      readout.textContent = `x ${x}  y ${y}`;
+      cross[0].setAttribute("x1", sx); cross[0].setAttribute("x2", sx); cross[0].setAttribute("y1", 0); cross[0].setAttribute("y2", 480);
+      cross[1].setAttribute("y1", sy); cross[1].setAttribute("y2", sy); cross[1].setAttribute("x1", 0); cross[1].setAttribute("x2", 640);
+      svg.classList.add("pointing");
+    };
+    svg.addEventListener("pointermove", show);
+    svg.addEventListener("pointerdown", show);
+    svg.addEventListener("pointerleave", () => { svg.classList.remove("pointing"); readout.textContent = ""; });
+  } else if (prog.overlay === "ttt") {
+    // ALBB4 draws its board with g.line() at screen x=200,300 / y=200,330 (x 100..415, y 110..420), but
+    // print() then writes ~30 lines of text and the last newline makes the BIOS scroll the whole
+    // graphics screen up one 16-px text row, so the board settles at y 94..404. Squares are entered
+    // as row then column (11..33).
+    svg.classList.add("ttt");
+    const xs = [100, 200, 300, 415], ys = [94, 184, 314, 404];
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
+      const code = `${r + 1}${c + 1}`;
+      const cell = el("rect", { x: xs[c], y: ys[r], width: xs[c + 1] - xs[c], height: ys[r + 1] - ys[r], class: "cell" });
+      el("text", { x: xs[c] + 6, y: ys[r] + 16 }, code);
+      cell.addEventListener("click", () => { for (const d of code) press(d.charCodeAt(0)); press(257); });
+    }
+    el("text", { x: 320, y: 60, "text-anchor": "middle", class: "hint" }, "tap a square, or type its number (row, column) + Enter");
+  }
+  if (prog.overlay) {
+    const btn = document.getElementById("guides-btn");
+    btn.hidden = false;
+    let on = true;
+    try { on = localStorage.getItem("guides") !== "off"; } catch (e) {}
+    const apply = () => { svg.toggleAttribute("hidden", !on); btn.classList.toggle("on", on); };
+    btn.onclick = () => { on = !on; try { localStorage.setItem("guides", on ? "on" : "off"); } catch (e) {} apply(); };
+    apply();
+  }
+
+  // ---- source viewer ------------------------------------------------------------
+  const tabs = document.getElementById("tabs");
+  const pre = document.getElementById("source");
+  const texts = {};
+  async function show(name) {
+    for (const b of tabs.children) b.classList.toggle("on", b.dataset.name === name);
+    if (!texts[name]) texts[name] = await fetch(`src/${prog.id}/${name}`, { cache: "no-store" }).then((r) => r.text());
+    pre.textContent = texts[name].replace(/\r\n/g, "\n");
+    pre.scrollTop = 0;
+  }
+  for (const name of m.sources) {
+    const b = document.createElement("button");
+    b.textContent = name;
+    b.dataset.name = name;
+    b.onclick = () => show(name);
+    tabs.appendChild(b);
+  }
+  show(m.sources[0]);
+
+  document.getElementById("facts").innerHTML =
+    `<b>${m.exe}</b> · ${m.exeBytes.toLocaleString()} bytes · ${m.compiler}<br>sha256 ${m.exeSha256}`;
+})();
+</script>
+</body>
+</html>

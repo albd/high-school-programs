@@ -1,0 +1,111 @@
+:root {
+  --bg: #0b0d12;
+  --panel: #151922;
+  --line: #262c38;
+  --text: #d8dce4;
+  --muted: #8a93a3;
+  --accent: #ffcc33;
+  --tc-blue: #0000aa;
+  --tc-cyan: #00aaaa;
+  --tc-text: #ffff55;
+  --radius: 10px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+a { color: var(--accent); }
+code, pre, .mono { font-family: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; }
+.wrap { max-width: 1100px; margin: 0 auto; padding: 20px 16px 48px; }
+header.top { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+header.top h1 { font-size: 22px; margin: 0; letter-spacing: .3px; }
+header.top .sub { color: var(--muted); }
+header.top a.back { text-decoration: none; }
+
+/* landing */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px;
+  text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 6px; transition: border-color .15s; }
+.card:hover { border-color: var(--accent); }
+.card h2 { font-size: 17px; margin: 0; color: var(--text); }
+.card .year { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; }
+.card p { margin: 0; color: var(--muted); }
+.card .go { margin-top: auto; padding-top: 8px; color: var(--accent); font-weight: 600; }
+.note { color: var(--muted); font-size: 13px; margin-top: 22px; border-top: 1px solid var(--line); padding-top: 12px; }
+
+/* player */
+.player { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+@media (min-width: 1000px) { .player { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); } }
+.screen-wrap { background: #000; border: 1px solid var(--line); border-radius: var(--radius); padding: 10px; }
+.stage { position: relative; width: 100%; margin: 0 auto; }
+#dos { width: 100%; aspect-ratio: 4 / 3; background: #000; }
+#screen:fullscreen { display: flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 0; }
+#screen:fullscreen .stage { width: min(100vw, calc(100vh * 4 / 3)); }
+
+/* orientation guides over the DOS screen */
+#overlay { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 5; }
+#overlay[hidden] { display: none; }
+#overlay text { font: 13px ui-monospace, Menlo, Consolas, monospace; fill: rgba(255, 204, 51, .75);
+  paint-order: stroke; stroke: rgba(0, 0, 0, .8); stroke-width: 3px; user-select: none; }
+#overlay.coords { cursor: crosshair; }
+#overlay .minor { stroke: rgba(255, 255, 255, .07); stroke-width: 1; }
+#overlay .major { stroke: rgba(255, 204, 51, .22); stroke-width: 1; }
+#overlay .axis { fill: rgba(255, 204, 51, .9); }
+#overlay .readout { fill: #ffe38a; font-size: 15px; }
+#overlay .cross { stroke: rgba(255, 227, 138, .45); stroke-width: 1; stroke-dasharray: 3 3; display: none; }
+#overlay.pointing .cross { display: inline; }
+#overlay .cell { fill: transparent; cursor: pointer; }
+#overlay .cell:hover { fill: rgba(255, 204, 51, .10); }
+#overlay .hint { font-size: 12px; fill: rgba(255, 204, 51, .6); }
+#guides-btn.on { border-color: var(--accent); color: var(--accent); }
+.controls { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; position: relative; }
+/* Invisible but focusable, so phones open their keyboard; 16px stops iOS zooming on focus. */
+#kbd { position: absolute; left: 0; top: 0; width: 1px; height: 1px; opacity: 0; border: 0; padding: 0;
+  font-size: 16px; pointer-events: none; }
+.kbd-on #kbd-btn { border-color: var(--accent); color: var(--accent); }
+button { font: inherit; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px;
+  padding: 8px 12px; cursor: pointer; min-width: 44px; min-height: 40px; }
+button:hover { border-color: var(--accent); }
+button.wide { min-width: 90px; }
+.keypad { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 10px; }
+.keypad button { padding: 10px 0; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 16px; }
+.keypad .enter { grid-column: span 2; background: #2a2410; border-color: #5a4a14; }
+.side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.box { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+.box h3 { margin: 0 0 8px; font-size: 14px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
+.box ul { margin: 0; padding-left: 18px; }
+.box li { margin: 4px 0; }
+.facts { font-size: 12.5px; color: var(--muted); word-break: break-all; }
+
+/* Turbo C-style source viewer */
+.tc { background: var(--tc-blue); color: var(--tc-text); border-radius: 4px; overflow: hidden; border: 2px solid var(--tc-cyan); }
+.tc .tabs { display: flex; background: var(--tc-cyan); }
+.tc .tabs button { background: transparent; border: 0; border-radius: 0; color: #000; padding: 4px 12px; min-height: 0;
+  font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; }
+.tc .tabs button.on { background: var(--tc-blue); color: #fff; }
+.tc pre { margin: 0; padding: 10px 12px; max-height: 520px; overflow: auto; font-size: 12.5px; line-height: 1.4; tab-size: 8; white-space: pre; }
+
+/* click-to-start poster */
+.poster { position: absolute; inset: 0; z-index: 10; padding: 0; border: 0; border-radius: 0; background: #000;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.poster[hidden] { display: none; }
+.poster img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; opacity: .55; image-rendering: pixelated; }
+.poster .play { position: relative; font: 600 20px/1 system-ui, sans-serif; color: #111; background: var(--accent);
+  padding: 14px 26px; border-radius: 999px; box-shadow: 0 6px 24px rgba(0, 0, 0, .5); }
+.poster:hover .play { filter: brightness(1.08); }
+
+/* credits + about link */
+.credits { margin: 10px 2px 0; font-size: 12px; color: var(--muted); }
+.credits a { color: inherit; }
+.about { align-self: center; font-size: 14px; text-decoration: none; }
+
+/* embed mode: just the screen and controls, for an <iframe> in a blog post */
+body.embed .wrap { max-width: none; padding: 0; }
+body.embed header.top, body.embed .side, body.embed #status { display: none; }
+body.embed .player { display: block; }
+body.embed .screen-wrap { border-radius: 8px; padding: 6px; }
+body.embed .controls { margin-top: 8px; }
+body.embed .keypad { margin-top: 8px; }
+/* on desktop the physical keyboard does the typing, so keep the embed compact */
+@media (pointer: fine) {
+  body.embed .keypad, body.embed .touch-only { display: none; }
+}

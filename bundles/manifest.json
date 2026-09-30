@@ -1,0 +1,24 @@
+{
+ "field": {
+  "exe": "FIELD.EXE",
+  "exeSha256": "a03a0813bb09e77afb94f83dd6f079dbac2bc1dc45fc8492b3808ec99ac8cdcb",
+  "exeBytes": 61888,
+  "bundle": "bundles/field.jsdos",
+  "sources": [
+   "FIELD.cpp",
+   "FUNCTION.cpp"
+  ],
+  "compiler": "Borland Turbo C++ 1.01"
+ },
+ "tictactoe": {
+  "exe": "ALBB4.EXE",
+  "exeSha256": "bed1cf167bf83794587e0180ee245f6714bd246ad53fc201bb7d068bbffffcce",
+  "exeBytes": 46194,
+  "bundle": "bundles/tictactoe.jsdos",
+  "sources": [
+   "ALBB4.cpp.txt",
+   "FUNCTION.cpp"
+  ],
+  "compiler": "Borland Turbo C++ 1.01"
+ }
+}

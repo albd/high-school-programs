@@ -1,0 +1,5 @@
+# The 2008 sources are published byte-for-byte (CRLF line endings included): never let git normalise them.
+src/**      -text
+*.jsdos     binary
+*.wasm      binary
+*.png       binary

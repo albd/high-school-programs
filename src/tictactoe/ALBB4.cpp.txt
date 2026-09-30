@@ -1,0 +1,166 @@
+#include<iostream.h>
+#include<conio.h>
+#include<math.h>
+#include<graphics.h>
+#include<stdlib.h>
+#include<function.h>
+
+
+int marray[3][3]={0,0,0,0,0,0,0,0,0};
+int array[3][3]={0,0,0,0,0,0,0,0,0};
+int tarray[8]={0,0,0,0,0,0,0,0};
+int g=0;
+void main()
+{      
+
+
+	void pv();
+	void check();
+	void update(int);
+	void print();
+	void input();
+	for(int ch=0;ch<10;ch++)
+	{       pv();
+		for(int x=0;x<8;x++)
+		{       if(tarray[x]==3)
+				{
+				print();
+				cout<<"i  win\ncredits:albert";
+				goto end;
+				}
+			if(tarray[x]==(-3))
+				{
+				print();
+				cout<<"u win\ncredits:not albert";
+				goto end;
+				}
+		}
+		for(x=0;x<3;x++)
+		{	for(int y=0;y<3;y++)
+			{	array[x][y]=0;
+			}
+		}
+		print();
+		if(ch%2==0)
+
+			input();
+		else
+		{	for(x=0;x<3;x++)
+			{	for(int y=0;y<3;y++)
+				{	if(marray[x][y]==0)
+						{marray[x][y]=1;
+						pv();
+						if(x+y==1||x+y==3)
+							g=g-2;
+						array[x][y]=g;
+						marray[x][y]=0;
+						}
+					else
+					{	array[x][y]=-10;
+					}
+				}
+			}
+			check();
+		}
+	 }
+	 end:
+	 getch();
+}
+
+
+
+void pv()
+{       g=0;
+	randomize();
+	for(int x=0;x<3;x++)
+	{	tarray[x]=marray[x][0]+marray[x][1]+marray[x][2];
+	}
+	for(x=0;x<3;x++)
+	{	tarray[x+3]=marray[0][x]+marray[1][x]+marray[2][x];
+	}
+	tarray[6]=marray[0][0]+marray[1][1]+marray[2][2];
+	tarray[7]=marray[0][2]+marray[1][1]+marray[2][0];
+	for(x=0;x<8;x++)
+	{       if(tarray[x]==1||tarray[x]==-1)
+			g=g-1+rand()%3;
+		if (tarray[x]==2)
+			g=g+2+rand()%2;
+		if(tarray[x]==-2)
+			g=g-5-rand()%2;
+		if(tarray[x]==3)
+			g=g+15+rand()%2;
+	}
+}
+
+
+
+void check()
+{       int a=0,b=0,d=-6;
+	for(int x=0;x<3;x++)
+		{	for(int y=0;y<3;y++)
+			{	if (array[x][y]>d)
+				{	d=array[x][y];
+					a=x;
+					b=y;
+				}
+			}
+		}
+	marray[a][b]=1;
+}
+
+
+
+
+void print()
+{
+
+	graphics g;
+
+
+	setfillstyle(SOLID_FILL,BLACK);
+	floodfill(1,1,BLACK);
+
+	cout<<"\n\n\n\n\n\n\n\n\n";
+
+	for (int x=0;x<3;x++)
+	{	for(int y=0;y<3;y++)
+		{       //cout<<marray[x][y];
+			
+			switch(marray[x][y])
+			{	case 1:cout<<"\t\tO";
+					break;
+				case -1:cout<<"\t\tX";
+					break;
+				default:cout<<"\t\t ";
+					break;
+
+			}
+			g.line(200,370,200,60);
+			g.line(300,370,300,60);
+			g.line(100,280,415,280);
+			g.line(100,150,415,150);
+
+		}
+		cout<<"\n\n\n\n\n\n\n";
+	}
+}
+
+
+
+
+void input()
+{       repeat:
+	int t=0,x=0,y=0;
+	cin>>t;
+	y=t%10-1;
+	x=t/10-1;
+	if(marray[x][y]==0)
+	marray[x][y]=(-1);
+	else
+	{cout<<"the block is already blocked";
+	goto repeat;
+	}
+}
+
+
+

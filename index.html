@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Turbo C++ Time Capsule</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Turbo C++ Time Capsule</h1>
+    <span class="sub">Albert's high-school programs (2008), running unmodified in DOSBox in your browser</span>
+  </header>
+  <div class="grid" id="grid"></div>
+  <p class="note">
+    Each program is the original, byte-identical 2008 source compiled by the real Borland Turbo C++ 1.01, running in
+    DOSBox compiled to WebAssembly (js-dos 8.5.0), entirely inside your browser.
+  </p>
+</div>
+<script src="programs.js"></script>
+<script>
+  const grid = document.getElementById("grid");
+  for (const p of window.PROGRAMS) {
+    const a = document.createElement("a");
+    a.className = "card";
+    a.href = "play.html?p=" + encodeURIComponent(p.id);
+    a.innerHTML = `<span class="year">${p.year}</span><h2>${p.title}</h2><p>${p.blurb}</p><span class="go">Run ▸</span>`;
+    grid.appendChild(a);
+  }
+</script>
+</body>
+</html>
